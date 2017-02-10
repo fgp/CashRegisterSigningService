@@ -19,7 +19,7 @@ The PIN of the smart card is currently hard-coded as "123456"
 
 A signature is created by performing a GET request on
 
-> http://127.0.0.1:1337/sign?hash=<base64url-encoded sha256 hash>
+> http://127.0.0.1:1337/sign?hash=[base64url-encoded sha256 hash]
 
 If the server responds with status code 200 (OK), the body contains the
 signature, also encoded as Base64URL. If the server responds with
