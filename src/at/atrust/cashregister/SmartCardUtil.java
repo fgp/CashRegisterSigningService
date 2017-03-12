@@ -50,14 +50,12 @@ public class SmartCardUtil {
 			X509CertificateHolder ch = new X509CertificateHolder(cert);
 			return ch;
 		} catch (Exception e) {
-			e.printStackTrace();
 			try {
 				ByteArrayInputStream bis = new ByteArrayInputStream(cert);
 				Certificate c2 = CertificateFactory.getInstance("X509").generateCertificate(bis);
 				X509CertificateHolder ch = new X509CertificateHolder(c2.getEncoded());
 				return ch;
 			} catch (Exception e2) {
-				e2.printStackTrace();
 				throw new SmartCardException("Error building certificate");
 			}
 		}
