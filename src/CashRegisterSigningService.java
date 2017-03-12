@@ -57,6 +57,8 @@ public class CashRegisterSigningService {
 	
 	private final static Logger LOGGER = Logger.getLogger(CashRegisterSigningService.class.getName());
 	
+	private static int PORT = 1337;
+	
 	private static String ENDPOINT = "/sign";
 	
 	private static String PIN = "123456";
@@ -336,7 +338,7 @@ public class CashRegisterSigningService {
         /* Create HTTP server, router requests to ENDPOINT to the handler,
          * and let everything execute on the same threshold (null executor)
          */
-        final HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 1337), 0);
+        final HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), PORT), 0);
         server.createContext(ENDPOINT, handler);
         server.setExecutor(null);
         LOGGER.log(Level.INFO, "Created HTTP server, listening on http:/" + server.getAddress() + ENDPOINT);
