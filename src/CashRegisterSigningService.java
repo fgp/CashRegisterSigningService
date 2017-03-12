@@ -40,10 +40,13 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import com.sun.net.httpserver.*;
 
 import javax.smartcardio.Card;
+import javax.smartcardio.CardException;
 import javax.smartcardio.CardTerminal;
 import javax.smartcardio.CardTerminals;
 import javax.smartcardio.TerminalFactory;
@@ -92,6 +95,50 @@ public class CashRegisterSigningService {
 
 	}
 
+	private static void resetJavaxSmartcardioContext() throws Exception {
+		/* Inspired by
+		 *   http://stackoverflow.com/questions/16921785/smartcard-terminal-removal-scard-e-no-service-cardexceptio
+		 * but simplified by calling initContext(). See also
+		 *   https://github.com/Kenobi-Time/openjdk8/blob/master/jdk/src/share/classes/sun/security/smartcardio/PCSCTerminals.java
+		 */
+		
+		/* Make PCSCTerminals initContext(), contextId and terminals accessible */
+        final Class<?> PCSCTerminals = Class.forName("sun.security.smartcardio.PCSCTerminals");
+        final Field PCSCTerminals_contextId = PCSCTerminals.getDeclaredField("contextId");
+        final Field PCSCTerminals_terminals = PCSCTerminals.getDeclaredField("terminals");
+        final Method PCSCTerminals_initContext = PCSCTerminals.getDeclaredMethod("initContext");
+        PCSCTerminals_contextId.setAccessible(true);
+        PCSCTerminals_terminals.setAccessible(true);
+        PCSCTerminals_initContext.setAccessible(true);
+        
+		try {
+			/* If there's no current context, there is nothing to do */
+			final long currentContextId = PCSCTerminals_contextId.getLong(PCSCTerminals);
+			LOGGER.log(Level.FINEST, "resetting pcsc context, current context id is " + currentContextId);
+			if (currentContextId == 0)
+				return;
+			
+			/* Clear terminals list */
+			Map<?,?> terminals = (Map<?, ?>) PCSCTerminals_terminals.get(PCSCTerminals);
+			if (terminals != null) {
+				LOGGER.log(Level.FINEST, "resetting pcsc context, clearing cached terminals");
+				terminals.clear();
+			}
+			
+			/* Reset context to zero and call initContext() */
+			LOGGER.log(Level.FINEST, "resetting pcsc context, clearing current context id");
+			PCSCTerminals_contextId.setLong(PCSCTerminals, 0);
+			LOGGER.log(Level.FINEST, "resetting pcsc context, calling initContext()");
+			PCSCTerminals_initContext.invoke(PCSCTerminals);
+		}
+		finally {
+			/* Reset accessibility flags */
+			PCSCTerminals_initContext.setAccessible(false);
+	        PCSCTerminals_contextId.setAccessible(false);
+	        PCSCTerminals_terminals.setAccessible(false);
+		}
+    }
+	
 	private static void getCashRegisterSmartCardInstance() throws SigningException {
 		try {
 			LOGGER.log(Level.FINE, "initializing cash register smart card");
@@ -105,8 +152,29 @@ public class CashRegisterSigningService {
 			}
 			LOGGER.log(Level.FINEST, "using card terminal factory " + terminalFactory.toString());
 
-			/* Enumerate card terminals, connect to inserted card */
-			final List<CardTerminal> cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
+			/* Enumerate card terminals */
+			List<CardTerminal> cardTerminals;
+			try {
+				cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
+			} catch (CardException e) {
+				/* Check if the error indicates that the PCSC context is stale
+				 * (see https://bugs.openjdk.java.net/browse/JDK-8026326)
+				 */
+				final String err = (e.getCause() != null) ? e.getCause().getMessage() : "";
+				if (!e.equals("SCARD_E_SERVICE_STOPPED")) {
+					LOGGER.log(Level.FINE, "list() failed, but error was '" + err + "', not resetting PCSC context");
+					throw e;
+				}
+				
+				/* Reset context */
+				LOGGER.log(Level.INFO, "PCSC error SCARD_E_SERVICE_STOPPED, resetting PCSC context to work around JDK-8026326");
+				resetJavaxSmartcardioContext();
+				
+				/* Redo */
+				cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
+			}
+			
+			/* Connect to inserted card */
 			if (cardTerminals.isEmpty())
 				throw new SmartCardException("no card terminal with inserted smart card found");
 			final CardTerminal cardTerminal = cardTerminals.get(0);
