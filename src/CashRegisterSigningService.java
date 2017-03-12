@@ -84,7 +84,7 @@ public class CashRegisterSigningService {
         }
 
         SigningException(int _clientCode, String _clientMessage, String logMessage, Throwable cause) {
-        	super(logMessage);
+        	super(logMessage, cause);
         	clientCode = _clientCode;
         	clientMessage = _clientMessage;
         }
