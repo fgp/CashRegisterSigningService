@@ -57,7 +57,7 @@ public class CashRegisterSigningService {
 	
 	private final static Logger LOGGER = Logger.getLogger(CashRegisterSigningService.class.getName());
 	
-	private static int PORT = 1337;
+	private static int PORT = 897;
 	
 	private static String ENDPOINT = "/sign";
 	
