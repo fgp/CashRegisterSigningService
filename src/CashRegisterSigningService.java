@@ -160,20 +160,37 @@ public class CashRegisterSigningService {
 				cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
 			} catch (CardException e) {
 				/* Check if the error indicates that the PCSC context is stale
-				 * (see https://bugs.openjdk.java.net/browse/JDK-8026326)
+				 * (see https://bugs.openjdk.java.net/browse/JDK-8026326).
+				 * If the context is state, we expect the cause to of type
+				 *   un.security.smartcardio.PCSCException
+				 *  and to have error message
+				 *    SCARD_E_SERVICE_STOPPED
 				 */
-				final String err = (e.getCause() != null) ? e.getCause().getMessage() : "";
-				if (!e.equals("SCARD_E_SERVICE_STOPPED")) {
-					LOGGER.log(Level.FINE, "list() failed, but error was '" + err + "', not resetting PCSC context");
+				final Throwable cause = e.getCause();
+				if (cause == null) {
+					LOGGER.log(Level.INFO, "list() failed, but no cause reported, not resetting PCSC context");
+					throw e;
+				}
+				final String causeType = cause.getClass().getName();
+				if (!causeType.equals("sun.security.smartcardio.PCSCException")) {
+					LOGGER.log(Level.INFO, "list() failed, but cause was a " + causeType + ", not resetting PCSC context");
+					throw e;
+				}
+				final String causeErr = e.getCause().getMessage();
+				if (!causeErr.equals("SCARD_E_SERVICE_STOPPED")) {
+					LOGGER.log(Level.INFO, "list() failed, but cause was " + causeErr + ", not resetting PCSC context");
 					throw e;
 				}
 				
 				/* Reset context */
-				LOGGER.log(Level.INFO, "PCSC error SCARD_E_SERVICE_STOPPED, resetting PCSC context to work around JDK-8026326");
+				LOGGER.log(Level.INFO, "list() failed with cause SCARD_E_SERVICE_STOPPED, will rest PCSC context and retry to work around JDK-8026326");
 				resetJavaxSmartcardioContext();
 				
 				/* Redo */
 				cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
+			} catch(Exception e) {
+				LOGGER.log(Level.INFO, "list() failed, but with error " + e.getClass().getName() + ", not resetting PCSC context");
+				throw e;
 			}
 			
 			/* Connect to inserted card */
