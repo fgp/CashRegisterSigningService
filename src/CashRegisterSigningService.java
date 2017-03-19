@@ -167,6 +167,12 @@ public class CashRegisterSigningService {
 			List<CardTerminal> cardTerminals;
 			try {
 				cardTerminals = terminalFactory.terminals().list(CardTerminals.State.CARD_PRESENT);
+				/* Code to inject SCARD_E_SERVICE_STOPPED errors for testing purposes
+				 *    final java.lang.Class<Throwable> PCSCException = (Class<Throwable>)Class.forName("sun.security.smartcardio.PCSCException");
+				 *    final java.lang.reflect.Constructor<Throwable> PCSCException_Construct = PCSCException.getDeclaredConstructor(Integer.TYPE);
+				 *    PCSCException_Construct.setAccessible(true);
+				 *    throw new CardException("list() failed", PCSCException_Construct.newInstance(0x8010001E));
+				 */
 			} catch (CardException e) {
 				/* Check if the error indicates that the PCSC context is stale
 				 * (see https://bugs.openjdk.java.net/browse/JDK-8026326).
