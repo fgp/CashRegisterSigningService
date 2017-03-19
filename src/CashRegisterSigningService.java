@@ -116,22 +116,25 @@ public class CashRegisterSigningService {
 		try {
 			/* If there's no current context, there is nothing to do */
 			final long currentContextId = PCSCTerminals_contextId.getLong(PCSCTerminals);
-			LOGGER.log(Level.FINEST, "resetting pcsc context, current context id is " + currentContextId);
-			if (currentContextId == 0)
+			if (currentContextId == 0) {
+				LOGGER.log(Level.INFO, "NOT resetting pcsc context, current context id is " + currentContextId);
 				return;
-			
+			}
+			LOGGER.log(Level.FINE, "resetting pcsc context, current context id is " + currentContextId);
+
 			/* Clear terminals list */
 			Map<?,?> terminals = (Map<?, ?>) PCSCTerminals_terminals.get(PCSCTerminals);
 			if (terminals != null) {
-				LOGGER.log(Level.FINEST, "resetting pcsc context, clearing cached terminals");
+				LOGGER.log(Level.FINE, "resetting pcsc context, clearing " + terminals.size() + " cached terminals");
 				terminals.clear();
 			}
 			
 			/* Reset context to zero and call initContext() */
-			LOGGER.log(Level.FINEST, "resetting pcsc context, clearing current context id");
+			LOGGER.log(Level.FINE, "resetting pcsc context, clearing current context id");
 			PCSCTerminals_contextId.setLong(PCSCTerminals, 0);
-			LOGGER.log(Level.FINEST, "resetting pcsc context, calling initContext()");
+			LOGGER.log(Level.FINE, "resetting pcsc context, calling initContext()");
 			PCSCTerminals_initContext.invoke(PCSCTerminals);
+			LOGGER.log(Level.FINE, "resetted pcsc context, new context id is " + PCSCTerminals_contextId.getLong(PCSCTerminals));
 		}
 		finally {
 			/* Reset accessibility flags */
