@@ -363,7 +363,7 @@ public class CashRegisterSigningService {
 		System.err.println("  -p, --port PORT         Port to listen on (Default " + DEFAULT_PORT + ")");
 		System.err.println("  -i, --pin PIN           Smartcard PIN (Default " + DEFAULT_PIN + ")");
 		System.err.println("");
-		System.err.println("Verbosity Levels: severse, warning, info, config, fine, finer, finest, all");
+		System.err.println("Verbosity Levels: severe, warning, info, config, fine, finer, finest, all");
 	}
 
 	static Level parseLogLevel(String level) throws CMDLineArgumentError {
@@ -427,7 +427,7 @@ public class CashRegisterSigningService {
 						throw new CMDLineArgumentError("Unknown argument " + arg);
 				}
 				catch (NoSuchElementException e) {
-					throw new CMDLineArgumentError("Missing mandatory argument after " + param, e);
+					throw new CMDLineArgumentError("Missing mandatory argument after " + arg, e);
 				}
 				catch (NumberFormatException e) {
 					throw new CMDLineArgumentError("Invalid integer " + param, e);
